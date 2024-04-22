@@ -13,5 +13,4 @@ node_socket.connect(('127.0.0.1', 8000))
 print(block_json.encode())
 print(block_json.encode().decode())  
 node_socket.send(block_json.encode())
-
 node_socket.close()

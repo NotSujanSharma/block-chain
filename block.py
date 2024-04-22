@@ -3,13 +3,13 @@ import time
 import ecdsa 
 
 class Block:
-    def __init__(self, data, previous_hash, nonce=0, public_key=None, signature=None):
+    def __init__(self, data, previous_hash,  nonce=0, hash='', public_key=None, signature=None):
         self.data = data
         self.previous_hash = previous_hash
         self.nonce = nonce
         self.public_key = public_key
         self.signature = signature
-        self.hash = self.calculate_hash()
+        self.hash = hash
         
 
     def calculate_hash(self):

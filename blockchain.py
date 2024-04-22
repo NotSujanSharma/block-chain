@@ -15,6 +15,7 @@ class Blockchain:
     def create_genesis_block(self):
         genesis_block = Block("Genesis Block", "0" * 64, public_key=self.public_key)
         genesis_block.mine(self.difficulty)
+        genesis_block.signature = self.sign_block(genesis_block)
         self.chain.append(genesis_block)
 
     def add_block(self, data):
@@ -23,6 +24,9 @@ class Blockchain:
         new_block.mine(self.difficulty)
         new_block.signature = self.sign_block(new_block)
         self.chain.append(new_block)
+        if(self.is_valid() & self.verify_signature(new_block)):
+            self.broadcast_block(new_block)
+        
 
     def is_valid(self):
         for i in range(1, len(self.chain)):
@@ -57,8 +61,10 @@ class Blockchain:
         public_key = ecdsa.VerifyingKey.from_string(bytes.fromhex(block.public_key), curve=ecdsa.SECP256k1)
         try:
             public_key.verify(bytes.fromhex(block.signature), data_string)
+            print("[+] Signature Verified")
             return True
         except ecdsa.BadSignatureError:
+            print("[-] Bad Signature")
             return False
         
     def start_server(self, port):
@@ -80,7 +86,7 @@ class Blockchain:
     def handle_client(self, conn, addr):
         buffer = b''
         while True:
-            data = conn.recv(2024)
+            data = conn.recv(9000)
             if not data:
                 break
 
@@ -99,27 +105,31 @@ class Blockchain:
                                 block_data['data'],
                                 block_data['previous_hash'],
                                 block_data['nonce'],
+                                block_data['hash'],
                                 block_data['public_key'],
                                 block_data['signature']
                             )
-                            if self.verify_signature(block) and self.is_valid_block(block):
+                            if  self.is_valid_block(block):
                                 self.chain.append(block)
 
                         print("[*] Updated chain")
+                        
 
 
                     elif message['type'] == 'new_block':
-                        printf("[*] Received new block")
+                        print("[*] Received new block")
                         block = Block(
                             message['data'],
                             message['previous_hash'],
                             message['nonce'],
+                            message['hash'],
                             message['public_key'],
                             message['signature']
                         )
                         
-                        if self.verify_signature(block) and self.is_valid_block(block):
-                            self.add_block(block)
+                        if  self.is_valid_block(block):
+                            self.chain.append(block)
+                            print("[*] Added block to chain")
                             self.broadcast_block(block)
 
                     elif message['type'] == 'new_node':
@@ -133,12 +143,14 @@ class Blockchain:
                 print(buffer)
                 pass
     def is_valid_block(self, block):
-        previous_block = self.chain[-1]
+        if len(self.chain) != 0:
+            
+            previous_block = self.chain[-1]
 
-        if block.previous_hash != previous_block.hash:
-            return False
+            if block.previous_hash != previous_block.hash:
+                return False
 
-        if not block.hash.startswith("0" * self.difficulty):
+        if not block.previous_hash.startswith("0" * self.difficulty):
             return False
 
         if not self.verify_signature(block):
@@ -152,12 +164,14 @@ class Blockchain:
             'data': block.data,
             'previous_hash': block.previous_hash,
             'nonce': block.nonce,
+            'hash' : block.hash,
             'public_key': block.public_key,
             'signature': block.signature
         }
         block_json = json.dumps(block_data)
 
         for node in self.nodes:
+            
             try:
                 node_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 node_socket.connect(node)  
@@ -175,6 +189,7 @@ class Blockchain:
                 'data': block.data,
                 'previous_hash': block.previous_hash,
                 'nonce': block.nonce,
+                'hash' : block.hash,
                 'public_key': block.public_key,
                 'signature': block.signature
             }
