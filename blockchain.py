@@ -1,6 +1,7 @@
 from block import Block
 import ecdsa 
 import socket
+import asyncio
 import threading
 import json
 class Blockchain:
@@ -137,7 +138,7 @@ class Blockchain:
                         elif message['type'] == 'new_node':
                             new_node = (message['node'][0], message['node'][1])
                             self.nodes.add(new_node)
-                            self.send_self_node(new_node)                            
+                            self.connect_back(new_node)                            
 
                             self.broadcast_chain()
 
@@ -153,7 +154,7 @@ class Blockchain:
         finally:
             conn.close()
 
-    def send_self_node(self, node):
+    def connect_back(self, node):
         response = {
             'type': 'response_node',
             'node': (self.addr, self.port)
@@ -233,3 +234,17 @@ class Blockchain:
                 self.nodes.remove(node)
                 print(f"Failed to broadcast chain to {node}")
 
+    async def connect_node(self, node):
+        try:
+            node_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            await asyncio.to_thread(node_socket.connect, node)
+            node_data = {
+                'type': 'new_node',
+                'node': (self.addr, self.port)
+            }
+            node_json = json.dumps(node_data)
+            await asyncio.to_thread(node_socket.send, node_json.encode())
+            node_socket.close()
+            print(f"Connected to {node}")
+        except Exception as e:
+            pass
