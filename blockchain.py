@@ -8,8 +8,10 @@ class Blockchain:
         self.chain = []
         self.difficulty = difficulty
         self.private_key, self.public_key = self.generate_keys()
-        self.create_genesis_block()
         self.nodes = set() 
+        self.port=port
+        self.addr = (socket.gethostbyname(socket.gethostname()), port)
+        print(f"[*] Node address: {self.addr}")
         self.start_server(port)
 
     def create_genesis_block(self):
@@ -84,64 +86,83 @@ class Blockchain:
             thread.start()
 
     def handle_client(self, conn, addr):
-        buffer = b''
-        while True:
-            data = conn.recv(9000)
-            if not data:
-                break
+        print(f"[*] Handling {addr}")
+        try:
+            buffer = b''
+            while True:
+                data = conn.recv(9000)
+                if not data:
+                    break
 
-            buffer += data 
+                buffer += data 
 
-            try:
-                if True:
-                    message = json.loads(buffer.decode())
-                    buffer = message 
-                    if message['type'] == 'new_chain':
-                        print(f"[*] Received new chain")
-                        chain = message['chain']
-                        self.chain = []
-                        for block_data in chain:
+                try:
+                    if True:
+                        message = json.loads(buffer.decode())
+                        buffer = message 
+                        if message['type'] == 'new_chain':
+                            print(f"[*] Received new chain")
+                            chain = message['chain']
+                            self.chain = []
+                            for block_data in chain:
+                                block = Block(
+                                    block_data['data'],
+                                    block_data['previous_hash'],
+                                    block_data['nonce'],
+                                    block_data['hash'],
+                                    block_data['public_key'],
+                                    block_data['signature']
+                                )
+                                if  self.is_valid_block(block):
+                                    self.chain.append(block)
+
+                            print("[*] Updated chain")
+
+
+
+                        elif message['type'] == 'new_block':
+                            print("[*] Received new block")
                             block = Block(
-                                block_data['data'],
-                                block_data['previous_hash'],
-                                block_data['nonce'],
-                                block_data['hash'],
-                                block_data['public_key'],
-                                block_data['signature']
+                                message['data'],
+                                message['previous_hash'],
+                                message['nonce'],
+                                message['hash'],
+                                message['public_key'],
+                                message['signature']
                             )
+                            
                             if  self.is_valid_block(block):
                                 self.chain.append(block)
+                                print("[*] Added block to chain")
+                                self.broadcast_block(block)
 
-                        print("[*] Updated chain")
-                        
+                        elif message['type'] == 'new_node':
+                            print("new node request received")
+                            new_node = (message['node'][0], message['node'][1])
+                            self.nodes.add(new_node)
+                            response = {
+                                'type': 'response_node',
+                                'node': (self.addr, self.port)
+                            }
+                            response_json = json.dumps(response)
+                            conn.send(response_json.encode())
 
+                            conn.close()
 
-                    elif message['type'] == 'new_block':
-                        print("[*] Received new block")
-                        block = Block(
-                            message['data'],
-                            message['previous_hash'],
-                            message['nonce'],
-                            message['hash'],
-                            message['public_key'],
-                            message['signature']
-                        )
-                        
-                        if  self.is_valid_block(block):
-                            self.chain.append(block)
-                            print("[*] Added block to chain")
-                            self.broadcast_block(block)
+                            self.broadcast_chain()
 
-                    elif message['type'] == 'new_node':
-                        print("new node request received")
-                        new_node = (message['node'][0], message['node'][1])
-                        self.nodes.add(new_node)
-                        self.broadcast_chain()
+                        elif message['type'] == 'response_node':
+                            response_node = (message['node'][0], message['node'][1])
+                            self.nodes.add(response_node)
 
-            except json.JSONDecodeError:
-                print("[-] JSONDecodeError")
-                print(buffer)
-                pass
+                except json.JSONDecodeError:
+                    print("[-] JSONDecodeError")
+                    print(buffer)
+                    pass
+        except OSError as e:
+            print(f"Error handling client connection: {e}")
+        finally:
+            conn.close()
     def is_valid_block(self, block):
         if len(self.chain) != 0:
             
