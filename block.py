@@ -1,6 +1,6 @@
 import hashlib
 import time
-import ecdsa  # Install ecdsa library: pip install ecdsa
+import ecdsa 
 
 class Block:
     def __init__(self, data, previous_hash, nonce=0, public_key=None, signature=None):
@@ -10,6 +10,7 @@ class Block:
         self.public_key = public_key
         self.signature = signature
         self.hash = self.calculate_hash()
+        
 
     def calculate_hash(self):
         data_string = f"{self.data}{self.previous_hash}{self.nonce}{self.public_key}{self.signature}".encode()
