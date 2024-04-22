@@ -12,5 +12,6 @@ def main():
         print(block)
 
     print(f"Is blockchain valid? {blockchain.is_valid()}")
+
 if __name__ == "__main__":
     main()
