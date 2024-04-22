@@ -8,10 +8,7 @@ def start():
         data = input("Enter the data to be added to the blockchain: ")
         blockchain.add_block(data)
         print("Blockchain:")
-        for block in blockchain.chain:
-            print(block)
         print(f"Is blockchain valid? {blockchain.is_valid()}")
-
 
 if __name__ == "__main__":
     start()

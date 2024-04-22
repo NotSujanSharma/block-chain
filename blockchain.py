@@ -10,8 +10,8 @@ class Blockchain:
         self.private_key, self.public_key = self.generate_keys()
         self.nodes = set() 
         self.port=port
-        self.addr = (socket.gethostbyname(socket.gethostname()), port)
-        print(f"[*] Node address: {self.addr}")
+        #self.addr = (socket.gethostbyname(socket.gethostname()), port)
+        self.addr='127.0.0.1'
         self.start_server(port)
 
     def create_genesis_block(self):
@@ -63,7 +63,6 @@ class Blockchain:
         public_key = ecdsa.VerifyingKey.from_string(bytes.fromhex(block.public_key), curve=ecdsa.SECP256k1)
         try:
             public_key.verify(bytes.fromhex(block.signature), data_string)
-            print("[+] Signature Verified")
             return True
         except ecdsa.BadSignatureError:
             print("[-] Bad Signature")
@@ -86,7 +85,6 @@ class Blockchain:
             thread.start()
 
     def handle_client(self, conn, addr):
-        print(f"[*] Handling {addr}")
         try:
             buffer = b''
             while True:
@@ -137,17 +135,9 @@ class Blockchain:
                                 self.broadcast_block(block)
 
                         elif message['type'] == 'new_node':
-                            print("new node request received")
                             new_node = (message['node'][0], message['node'][1])
                             self.nodes.add(new_node)
-                            response = {
-                                'type': 'response_node',
-                                'node': (self.addr, self.port)
-                            }
-                            response_json = json.dumps(response)
-                            conn.send(response_json.encode())
-
-                            conn.close()
+                            self.send_self_node(new_node)                            
 
                             self.broadcast_chain()
 
@@ -157,12 +147,24 @@ class Blockchain:
 
                 except json.JSONDecodeError:
                     print("[-] JSONDecodeError")
-                    print(buffer)
                     pass
         except OSError as e:
             print(f"Error handling client connection: {e}")
         finally:
             conn.close()
+
+    def send_self_node(self, node):
+        response = {
+            'type': 'response_node',
+            'node': (self.addr, self.port)
+        }
+        response_json = json.dumps(response)
+        node_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        node_socket.connect(node)
+        print(f"[*] Sending self node to {node}")
+        node_socket.send(response_json.encode())
+        node_socket.close()
+
     def is_valid_block(self, block):
         if len(self.chain) != 0:
             
