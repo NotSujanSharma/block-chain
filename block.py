@@ -1,6 +1,5 @@
 import hashlib
 import time
-import ecdsa 
 
 class Block:
     def __init__(self, data, previous_hash,  nonce=0, hash='', public_key=None, signature=None):
