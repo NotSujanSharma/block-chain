@@ -81,7 +81,6 @@ class Blockchain:
     def handle_connections(self, server_socket):
         while True:
             conn, addr = server_socket.accept()
-            print(f"[+] Connected with {addr}")
             thread = threading.Thread(target=self.handle_client, args=(conn, addr))
             thread.start()
 
@@ -138,7 +137,7 @@ class Blockchain:
                         elif message['type'] == 'new_node':
                             new_node = (message['node'][0], message['node'][1])
                             self.nodes.add(new_node)
-                            self.connect_back(new_node)                            
+                            asyncio.run(self.connect_node(new_node))                        
 
                             self.broadcast_chain()
 
@@ -153,18 +152,6 @@ class Blockchain:
             print(f"Error handling client connection: {e}")
         finally:
             conn.close()
-
-    def connect_back(self, node):
-        response = {
-            'type': 'response_node',
-            'node': (self.addr, self.port)
-        }
-        response_json = json.dumps(response)
-        node_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        node_socket.connect(node)
-        print(f"[*] Sending self node to {node}")
-        node_socket.send(response_json.encode())
-        node_socket.close()
 
     def is_valid_block(self, block):
         if len(self.chain) != 0:
@@ -234,17 +221,17 @@ class Blockchain:
                 self.nodes.remove(node)
                 print(f"Failed to broadcast chain to {node}")
 
-    async def connect_node(self, node):
+    async def connect_node(self, node, new_node=False):
         try:
             node_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             await asyncio.to_thread(node_socket.connect, node)
             node_data = {
-                'type': 'new_node',
+                'type': 'new_node' if new_node else 'response_node',
                 'node': (self.addr, self.port)
             }
             node_json = json.dumps(node_data)
             await asyncio.to_thread(node_socket.send, node_json.encode())
             node_socket.close()
-            print(f"Connected to {node}")
+            print(f"[+] Connected with {node}")
         except Exception as e:
             pass

@@ -1,10 +1,12 @@
 from block import Block
+import sys
 import asyncio
 from blockchain import Blockchain
 
 def start():
-    blockchain=Blockchain(4,8000)
-    blockchain.create_genesis_block()
+    port=int(sys.argv[1])
+    blockchain=Blockchain(4,port)
+    #blockchain.create_genesis_block()
     connect_to_seeds(blockchain)
     while True:
         data = input("Enter the data to be added to the blockchain: ")
@@ -15,11 +17,9 @@ def start():
 def connect_to_seeds(blockchain):
     seed_nodes = [
         ('127.0.0.1', 8001),
-        ('127.0.0.1', 8002),
-        ('127.0.0.1', 8003)
     ]
     for node in seed_nodes:
-        asyncio.run(blockchain.connect_node(node))
+        asyncio.run(blockchain.connect_node(node, new_node=True) )
 
 
 if __name__ == "__main__":
