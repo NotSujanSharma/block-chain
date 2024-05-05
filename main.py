@@ -4,10 +4,22 @@ import asyncio
 from blockchain import Blockchain
 
 def start():
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <port> [genesis]")
+        print("If you want to create a genesis block, add 'genesis' as the second argument and use port 8001.")
+        print("Example:")
+        print(" python main.py 8001 genesis")
+        print(" python main.py 8000")
+        sys.exit(1)
+
     port=int(sys.argv[1])
     blockchain=Blockchain(4,port)
-    #blockchain.create_genesis_block()
-    connect_to_seeds(blockchain)
+
+    if len(sys.argv) > 2 and sys.argv[2] == 'genesis':
+        blockchain.create_genesis_block()
+    else:
+        connect_to_seeds(blockchain)
+
     while True:
         data = input("Enter the data to be added to the blockchain: ")
         blockchain.add_block(data)
