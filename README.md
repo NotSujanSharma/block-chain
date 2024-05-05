@@ -1,6 +1,8 @@
 # Block Chain (From Scratch - Python)
 
-To run the project you need to install requirements from requirement.txt
+## Installing requirements
+
+To run the project you to have ecdsa installed, to install that run:
 
 ```
 pip3 install -r requirements.txt
